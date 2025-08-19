@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\AuthController;
 
 Route::prefix('v1')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/verify-token', [AuthController::class, 'verifyToken']);
 
     Route::middleware('auth:api')->group(function () {
         Route::get('/me', [AuthController::class, 'me']);

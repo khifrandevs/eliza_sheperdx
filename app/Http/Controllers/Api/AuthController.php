@@ -74,6 +74,72 @@ class AuthController extends Controller
         }
     }
 
+    public function verifyToken(Request $request)
+    {
+        try {
+            // Get token from Authorization header
+            $token = $request->bearerToken();
+
+            if (!$token) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Token not provided'
+                ], 401);
+            }
+
+            // Verify and decode the token
+            $payload = JWTAuth::setToken($token)->getPayload();
+
+            // Check if token is expired
+            if ($payload->get('exp') < time()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Token has expired'
+                ], 401);
+            }
+
+            // Get user from token
+            $user = JWTAuth::setToken($token)->authenticate();
+
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid token'
+                ], 401);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Token is valid',
+                'data' => [
+                    'user' => [
+                        'id' => $user->id,
+                        'id_akun' => $user->id_akun,
+                        'role' => 'pendeta',
+                        'nama' => $user->nama_pendeta,
+                    ],
+                    'token_info' => [
+                        'expires_at' => date('Y-m-d H:i:s', $payload->get('exp')),
+                        'issued_at' => date('Y-m-d H:i:s', $payload->get('iat')),
+                    ]
+                ]
+            ], 200);
+
+        } catch (JWTException $e) {
+            Log::error('Token Verification Error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid token'
+            ], 401);
+        } catch (\Exception $e) {
+            Log::error('Unexpected Token Verification Error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Unexpected error: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function me(Request $request)
     {
         try {
