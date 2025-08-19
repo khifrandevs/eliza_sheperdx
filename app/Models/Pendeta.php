@@ -23,10 +23,10 @@ class Pendeta extends Authenticatable implements JWTSubject
         'password' => 'hashed',
     ];
 
-    // Specify id_akun as the authentication identifier
+    // Use the default primary key for authentication
     public function getAuthIdentifierName()
     {
-        return 'id_akun';
+        return 'id';
     }
 
     public function getJWTIdentifier()
@@ -37,7 +37,6 @@ class Pendeta extends Authenticatable implements JWTSubject
     public function getJWTCustomClaims()
     {
         return [
-            'guard' => 'pendeta',
             'role' => $this->role ?? 'pendeta',
         ];
     }

@@ -14,6 +14,8 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
             'auth.jwt' => \Tymon\JWTAuth\Http\Middleware\Authenticate::class,
+            'jwt.auth' => \Tymon\JWTAuth\Http\Middleware\Authenticate::class,
+            'auth:api' => \Tymon\JWTAuth\Http\Middleware\Authenticate::class,
             'auth:superadmin' => \Illuminate\Auth\Middleware\Authenticate::class . ':superadmin',
             'auth:departemen' => \Illuminate\Auth\Middleware\Authenticate::class . ':departemen',
         ]);
