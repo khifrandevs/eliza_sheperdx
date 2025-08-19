@@ -22,6 +22,9 @@ class PermohonanPerpindahan extends Model
 
     protected $casts = [
         'tanggal_permohonan' => 'date',
+        'status' => 'string', // Opsional, untuk memastikan enum ditangani sebagai string
+        'created_at' => 'datetime', // Opsional, untuk kejelasan
+        'updated_at' => 'datetime', // Opsional, untuk kejelasan
     ];
 
     // Relasi
