@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Models\Pendeta;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Tymon\JWTAuth\Facades\JWTAuth;
@@ -74,40 +75,28 @@ class AuthController extends Controller
         }
     }
 
-    public function verifyToken(Request $request)
+        public function verifyToken(Request $request)
     {
         try {
-            // Get token from Authorization header
-            $token = $request->bearerToken();
-
+            $token = JWTAuth::getToken();
             if (!$token) {
+                Log::warning('Token not found in request');
                 return response()->json([
                     'success' => false,
                     'message' => 'Token not provided'
                 ], 401);
             }
 
-            // Verify and decode the token
-            $payload = JWTAuth::setToken($token)->getPayload();
-
-            // Check if token is expired
-            if ($payload->get('exp') < time()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Token has expired'
-                ], 401);
-            }
-
-            // Get user from token
-            $user = JWTAuth::setToken($token)->authenticate();
-
+            $user = JWTAuth::authenticate($token);
             if (!$user) {
+                Log::warning('Invalid or expired token');
                 return response()->json([
                     'success' => false,
-                    'message' => 'Invalid token'
+                    'message' => 'Invalid or expired token'
                 ], 401);
             }
 
+            Log::info('Token verified for user: ' . $user->nama_pendeta);
             return response()->json([
                 'success' => true,
                 'message' => 'Token is valid',
@@ -117,19 +106,14 @@ class AuthController extends Controller
                         'id_akun' => $user->id_akun,
                         'role' => 'pendeta',
                         'nama' => $user->nama_pendeta,
-                    ],
-                    'token_info' => [
-                        'expires_at' => date('Y-m-d H:i:s', $payload->get('exp')),
-                        'issued_at' => date('Y-m-d H:i:s', $payload->get('iat')),
                     ]
                 ]
             ], 200);
-
         } catch (JWTException $e) {
             Log::error('Token Verification Error: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => 'Invalid token'
+                'message' => 'Token verification failed: ' . $e->getMessage()
             ], 401);
         } catch (\Exception $e) {
             Log::error('Unexpected Token Verification Error: ' . $e->getMessage());
