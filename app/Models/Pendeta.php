@@ -20,8 +20,34 @@ class Pendeta extends Authenticatable implements JWTSubject
     ];
 
     protected $casts = [
-        'password' => 'hashed',
+        'id' => 'integer',              // bigint(20) unsigned, primary key
+        'id_akun' => 'string',          // varchar(255)
+        'password' => 'hashed',         // varchar(255), hashed
+        'nama_pendeta' => 'string',     // varchar(255)
+        'no_telp' => 'string',          // varchar(255)
+        'alamat' => 'string',           // text, nullable
+        'region_id' => 'integer',       // bigint(20) unsigned
+        'departemen_id' => 'integer',   // bigint(20) unsigned
+        'gereja_id' => 'integer',       // bigint(20) unsigned, nullable
+        'created_at' => 'datetime',     // timestamp, nullable
+        'updated_at' => 'datetime',     // timestamp, nullable
     ];
+
+    // Relasi
+    public function region()
+    {
+        return $this->belongsTo(Region::class, 'region_id');
+    }
+
+    public function departemen()
+    {
+        return $this->belongsTo(Departemen::class, 'departemen_id');
+    }
+
+    public function gereja()
+    {
+        return $this->belongsTo(Gereja::class, 'gereja_id');
+    }
 
     // Use the default primary key for authentication
     public function getAuthIdentifierName()

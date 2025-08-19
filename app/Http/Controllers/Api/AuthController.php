@@ -153,6 +153,27 @@ class AuthController extends Controller
                         'id_akun' => $user->id_akun,
                         'role' => 'pendeta',
                         'nama' => $user->nama_pendeta,
+                        'no_telp' => $user->no_telp,
+                        'alamat' => $user->alamat,
+                        'region' => $user->region ? [
+                            'id' => $user->region->id,
+                            'kode_region' => $user->region->kode_region,
+                            'nama_region' => $user->region->nama_region,
+                            'deskripsi' => $user->region->deskripsi,
+                        ] : null,
+                        'departemen' => $user->departemen ? [
+                            'id' => $user->departemen->id,
+                            'id_akun' => $user->departemen->id_akun,
+                            'nama_departemen' => $user->departemen->id,
+                            'deskripsi' => $user->departemen->deskripsi,
+                            'nama_region' => $user->departemen->region->nama_region,
+                        ] : null,
+                        'gereja' => $user->gereja ? [
+                            'id' => $user->gereja->id,
+                            'nama_gereja' => $user->gereja->nama_gereja,
+                            'alamat' => $user->gereja->alamat,
+                            'nama_region' => $user->gereja->region->nama_region,
+                        ] : null,
                     ]
                 ]
             ], 200);
