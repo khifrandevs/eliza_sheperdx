@@ -24,12 +24,11 @@ class AnggotaController extends Controller
      */
     public function index()
     {
-        $anggotas = Anggota::with('gereja')->get();
+        $anggotas = Anggota::with(['gereja.region'])->get();
         return response()->json([
             'status' => 'success',
             'message' => 'List of Anggota',
-            'data' => $anggotas,
-            'region' => $anggotas->region
+            'data' => $anggotas
         ], 200);
     }
 }

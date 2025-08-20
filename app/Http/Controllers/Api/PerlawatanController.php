@@ -6,6 +6,7 @@ use App\Models\Perlawatan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Storage;
 
@@ -25,7 +26,7 @@ class PerlawatanController extends Controller
     {
         try {
             $perlawatans = Perlawatan::with(['pendeta', 'anggota'])->get();
-            
+
             $data = $perlawatans->map(function ($perlawatan) {
                 return [
                     'id' => $perlawatan->id,
@@ -35,7 +36,7 @@ class PerlawatanController extends Controller
                     ] : null,
                     'anggota' => $perlawatan->anggota ? [
                         'id' => $perlawatan->anggota->id,
-                        'nama' => $perlawatan->anggota->nama,
+                        'nama' => $perlawatan->anggota->nama_anggota,
                     ] : null,
                     'tanggal' => $perlawatan->tanggal->format('Y-m-d'),
                     'lokasi' => $perlawatan->lokasi,
@@ -134,7 +135,7 @@ class PerlawatanController extends Controller
                     ] : null,
                     'anggota' => $perlawatan->anggota ? [
                         'id' => $perlawatan->anggota->id,
-                        'nama' => $perlawatan->anggota->nama,
+                        'nama' => $perlawatan->anggota->nama_anggota,
                     ] : null,
                     'tanggal' => $perlawatan->tanggal->format('Y-m-d'),
                     'lokasi' => $perlawatan->lokasi,
@@ -163,15 +164,20 @@ class PerlawatanController extends Controller
     public function update(Request $request, $id)
     {
         try {
+            Log::info('Update method called for ID:', ['id' => $id]);
             $perlawatan = Perlawatan::findOrFail($id);
+
+            // Debug: Log the request data
+            Log::info('Update request data:', $request->all());
+            Log::info('Current perlawatan data:', $perlawatan->toArray());
 
             $validator = Validator::make($request->all(), [
                 'pendeta_id' => 'sometimes|exists:pendetas,id',
                 'anggota_id' => 'sometimes|exists:anggotas,id',
                 'tanggal' => 'sometimes|date',
                 'lokasi' => 'sometimes|string|max:255',
-                'gambar_bukti' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048', // Max 2MB
-                'catatan' => 'nullable|string',
+                'gambar_bukti' => 'sometimes|nullable|image|mimes:jpeg,png,jpg,gif|max:2048', // Max 2MB
+                'catatan' => 'sometimes|nullable|string',
             ]);
 
             if ($validator->fails()) {
@@ -182,29 +188,62 @@ class PerlawatanController extends Controller
                 ], 422);
             }
 
-            $data = $request->all();
+            // Prepare update data - only include fields that are present
+            $updateData = [];
+            if ($request->has('pendeta_id')) {
+                $updateData['pendeta_id'] = $request->pendeta_id;
+            }
+            if ($request->has('anggota_id')) {
+                $updateData['anggota_id'] = $request->anggota_id;
+            }
+            if ($request->has('tanggal')) {
+                $updateData['tanggal'] = $request->tanggal;
+            }
+            if ($request->has('lokasi')) {
+                $updateData['lokasi'] = $request->lokasi;
+            }
+            if ($request->has('catatan')) {
+                $updateData['catatan'] = $request->catatan;
+            }
 
             // Handle file upload
             if ($request->hasFile('gambar_bukti')) {
+                Log::info('File upload detected');
+
                 // Delete old file if exists
                 if ($perlawatan->gambar_bukti && file_exists(public_path('gambar_bukti/' . $perlawatan->gambar_bukti))) {
                     unlink(public_path('gambar_bukti/' . $perlawatan->gambar_bukti));
+                    Log::info('Old file deleted: ' . $perlawatan->gambar_bukti);
                 }
-                
+
                 $file = $request->file('gambar_bukti');
                 $filename = time() . '_' . $file->getClientOriginalName();
+
+                Log::info('Moving file to: ' . public_path('gambar_bukti/' . $filename));
                 $file->move(public_path('gambar_bukti'), $filename);
-                $data['gambar_bukti'] = $filename;
+
+                $updateData['gambar_bukti'] = $filename;
+                Log::info('File uploaded successfully: ' . $filename);
+            } else {
+                Log::info('No file upload detected');
             }
 
-            $perlawatan->update($data);
+            // Debug: Log the data before update
+            Log::info('Data to update:', $updateData);
+
+            $updated = $perlawatan->update($updateData);
+
+            // Debug: Log the data after update
+            Log::info('Update result:', ['updated' => $updated]);
+            Log::info('Updated perlawatan data:', $perlawatan->fresh()->toArray());
 
             return response()->json([
                 'status' => 'success',
                 'message' => 'Perlawatan updated successfully',
-                'data' => $perlawatan->load(['pendeta', 'anggota']),
+                'data' => $perlawatan->fresh()->load(['pendeta', 'anggota']),
             ], 200);
         } catch (\Exception $e) {
+            Log::error('Update error:', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to update perlawatan',

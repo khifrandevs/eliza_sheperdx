@@ -6,6 +6,7 @@ use App\Models\Penjadwalan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Routing\Controller;
 
 class PenjadwalanController extends Controller
@@ -24,7 +25,7 @@ class PenjadwalanController extends Controller
     {
         try {
             $penjadwalans = Penjadwalan::with('pendeta')->get();
-            
+
             $data = $penjadwalans->map(function ($penjadwalan) {
                 return [
                     'id' => $penjadwalan->id,
@@ -110,7 +111,7 @@ class PenjadwalanController extends Controller
         }
     }
 
-    /**
+    /**w
      * Display the specified resource.
      *
      * @param  int  $id
@@ -159,15 +160,21 @@ class PenjadwalanController extends Controller
     public function update(Request $request, $id)
     {
         try {
+            Log::info('Update method called for ID:', ['id' => $id]);
             $penjadwalan = Penjadwalan::findOrFail($id);
 
-            $validator = Validator::make($request->all(), [
+            // Get all input data
+            $inputData = $request->all();
+            Log::info('Input data:', $inputData);
+
+            // Validate the data
+            $validator = Validator::make($inputData, [
                 'pendeta_id' => 'sometimes|exists:pendetas,id',
                 'judul_kegiatan' => 'sometimes|string|max:255',
-                'deskripsi' => 'nullable|string',
+                'deskripsi' => 'sometimes|nullable|string',
                 'tanggal_mulai' => 'sometimes|date',
                 'tanggal_selesai' => 'sometimes|date|after_or_equal:tanggal_mulai',
-                'gambar_bukti' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048', // Max 2MB
+                'gambar_bukti' => 'sometimes|nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
                 'lokasi' => 'sometimes|string|max:255',
             ]);
 
@@ -179,7 +186,14 @@ class PenjadwalanController extends Controller
                 ], 422);
             }
 
-            $data = $request->all();
+            // Prepare update data
+            $updateData = [];
+            if (isset($inputData['pendeta_id'])) $updateData['pendeta_id'] = $inputData['pendeta_id'];
+            if (isset($inputData['judul_kegiatan'])) $updateData['judul_kegiatan'] = $inputData['judul_kegiatan'];
+            if (isset($inputData['deskripsi'])) $updateData['deskripsi'] = $inputData['deskripsi'];
+            if (isset($inputData['tanggal_mulai'])) $updateData['tanggal_mulai'] = $inputData['tanggal_mulai'];
+            if (isset($inputData['tanggal_selesai'])) $updateData['tanggal_selesai'] = $inputData['tanggal_selesai'];
+            if (isset($inputData['lokasi'])) $updateData['lokasi'] = $inputData['lokasi'];
 
             // Handle file upload
             if ($request->hasFile('gambar_bukti')) {
@@ -187,21 +201,24 @@ class PenjadwalanController extends Controller
                 if ($penjadwalan->gambar_bukti && file_exists(public_path('gambar_bukti_penjadwalan/' . $penjadwalan->gambar_bukti))) {
                     unlink(public_path('gambar_bukti_penjadwalan/' . $penjadwalan->gambar_bukti));
                 }
-                
+
                 $file = $request->file('gambar_bukti');
                 $filename = time() . '_' . $file->getClientOriginalName();
                 $file->move(public_path('gambar_bukti_penjadwalan'), $filename);
-                $data['gambar_bukti'] = $filename;
+                $updateData['gambar_bukti'] = $filename;
             }
 
-            $penjadwalan->update($data);
+            Log::info('Update data:', $updateData);
+
+            $penjadwalan->update($updateData);
 
             return response()->json([
                 'status' => 'success',
                 'message' => 'Penjadwalan updated successfully',
-                'data' => $penjadwalan->load('pendeta'),
+                'data' => $penjadwalan->fresh()->load('pendeta'),
             ], 200);
         } catch (\Exception $e) {
+            Log::error('Update error:', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to update penjadwalan',
@@ -239,5 +256,54 @@ class PenjadwalanController extends Controller
                 'error' => $e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * Parse multipart form data for PUT requests
+     */
+    private function parseMultipartData(Request $request)
+    {
+        $data = [];
+
+        // Get the raw input
+        $input = $request->getContent();
+
+        // Parse the multipart boundary
+        $boundary = null;
+        if (preg_match('/boundary=(.*)$/', $request->header('Content-Type'), $matches)) {
+            $boundary = $matches[1];
+        }
+
+        if ($boundary) {
+            // Split the content by boundary
+            $parts = array_slice(explode('--' . $boundary, $input), 1);
+
+            foreach ($parts as $part) {
+                // Skip the last part (boundary end)
+                if ($part == "--\r\n" || $part == "--") {
+                    continue;
+                }
+
+                // Parse the part
+                $part = ltrim($part, "\r\n");
+                list($rawHeaders, $body) = explode("\r\n\r\n", $part, 2);
+
+                // Parse headers
+                $headers = [];
+                foreach (explode("\r\n", $rawHeaders) as $header) {
+                    if (preg_match('/^([^:]+):\s*(.+)$/', $header, $matches)) {
+                        $headers[strtolower($matches[1])] = $matches[2];
+                    }
+                }
+
+                // Get the field name
+                if (preg_match('/name="([^"]+)"/', $headers['content-disposition'] ?? '', $matches)) {
+                    $name = $matches[1];
+                    $data[$name] = trim($body);
+                }
+            }
+        }
+
+        return $data;
     }
 }

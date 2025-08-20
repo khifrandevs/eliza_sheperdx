@@ -13,8 +13,6 @@ class RegionController extends Controller
 {
     public function __construct()
     {
-
-
     }
 
     /**

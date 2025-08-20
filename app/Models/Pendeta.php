@@ -49,6 +49,17 @@ class Pendeta extends Authenticatable implements JWTSubject
         return $this->belongsTo(Gereja::class, 'gereja_id');
     }
 
+    // Chat relationships
+    public function sentMessages()
+    {
+        return $this->hasMany(ChatMessage::class, 'sender_id');
+    }
+
+    public function receivedMessages()
+    {
+        return $this->hasMany(ChatMessage::class, 'receiver_id');
+    }
+
     // Use the default primary key for authentication
     public function getAuthIdentifierName()
     {
