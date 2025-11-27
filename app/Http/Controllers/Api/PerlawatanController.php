@@ -25,7 +25,13 @@ class PerlawatanController extends Controller
     public function index()
     {
         try {
-            $perlawatans = Perlawatan::with(['pendeta', 'anggota'])->get();
+            // Get the authenticated pendeta
+            $pendeta = Auth::user();
+
+            // Get perlawatan only for the logged-in pendeta
+            $perlawatans = Perlawatan::with(['pendeta', 'anggota'])
+                ->where('pendeta_id', $pendeta->id)
+                ->get();
 
             $data = $perlawatans->map(function ($perlawatan) {
                 return [
@@ -122,7 +128,13 @@ class PerlawatanController extends Controller
     public function show($id)
     {
         try {
-            $perlawatan = Perlawatan::with(['pendeta', 'anggota'])->findOrFail($id);
+            // Get the authenticated pendeta
+            $pendeta = Auth::user();
+
+            // Get perlawatan only for the logged-in pendeta
+            $perlawatan = Perlawatan::with(['pendeta', 'anggota'])
+                ->where('pendeta_id', $pendeta->id)
+                ->findOrFail($id);
 
             return response()->json([
                 'status' => 'success',
@@ -165,7 +177,13 @@ class PerlawatanController extends Controller
     {
         try {
             Log::info('Update method called for ID:', ['id' => $id]);
-            $perlawatan = Perlawatan::findOrFail($id);
+
+            // Get the authenticated pendeta
+            $pendeta = Auth::user();
+
+            // Get perlawatan only for the logged-in pendeta
+            $perlawatan = Perlawatan::where('pendeta_id', $pendeta->id)
+                ->findOrFail($id);
 
             // Debug: Log the request data
             Log::info('Update request data:', $request->all());
@@ -261,7 +279,12 @@ class PerlawatanController extends Controller
     public function destroy($id)
     {
         try {
-            $perlawatan = Perlawatan::findOrFail($id);
+            // Get the authenticated pendeta
+            $pendeta = Auth::user();
+
+            // Get perlawatan only for the logged-in pendeta
+            $perlawatan = Perlawatan::where('pendeta_id', $pendeta->id)
+                ->findOrFail($id);
 
             // Delete file if exists
             if ($perlawatan->gambar_bukti && file_exists(public_path('gambar_bukti/' . $perlawatan->gambar_bukti))) {

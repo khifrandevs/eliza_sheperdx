@@ -12,7 +12,7 @@ class PermohonanPerpindahanController extends Controller
 {
     public function __construct()
     {
-        // $this->middleware('auth:api');
+        $this->middleware('auth:api');
     }
 
     /**
@@ -23,8 +23,14 @@ class PermohonanPerpindahanController extends Controller
     public function index()
     {
         try {
-            $permohonans = PermohonanPerpindahan::with(['pendeta', 'regionAsal', 'regionTujuan'])->get();
-            
+            // Get the authenticated pendeta
+            $pendeta = Auth::user();
+
+            // Get permohonan only for the logged-in pendeta
+            $permohonans = PermohonanPerpindahan::with(['pendeta', 'regionAsal', 'regionTujuan'])
+                ->where('pendeta_id', $pendeta->id)
+                ->get();
+
             $data = $permohonans->map(function ($permohonan) {
                 return [
                     'id' => $permohonan->id,
@@ -71,7 +77,13 @@ class PermohonanPerpindahanController extends Controller
     public function show($id)
     {
         try {
-            $permohonan = PermohonanPerpindahan::with(['pendeta', 'regionAsal', 'regionTujuan'])->findOrFail($id);
+            // Get the authenticated pendeta
+            $pendeta = Auth::user();
+
+            // Get permohonan only for the logged-in pendeta
+            $permohonan = PermohonanPerpindahan::with(['pendeta', 'regionAsal', 'regionTujuan'])
+                ->where('pendeta_id', $pendeta->id)
+                ->findOrFail($id);
 
             return response()->json([
                 'status' => 'success',
@@ -115,8 +127,10 @@ class PermohonanPerpindahanController extends Controller
     public function store(Request $request)
     {
         try {
+            // Get the authenticated pendeta
+            $pendeta = Auth::user();
+
             $validator = Validator::make($request->all(), [
-                'pendeta_id' => 'required|exists:pendetas,id',
                 'region_asal_id' => 'required|exists:regions,id',
                 'region_tujuan_id' => 'required|exists:regions,id|different:region_asal_id',
                 'alasan' => 'required|string',
@@ -133,6 +147,8 @@ class PermohonanPerpindahanController extends Controller
             }
 
             $data = $request->all();
+            // Set the pendeta_id to the authenticated user's ID
+            $data['pendeta_id'] = $pendeta->id;
             // Set default status to 'pending' if not provided
             $data['status'] = $request->input('status', 'pending');
 

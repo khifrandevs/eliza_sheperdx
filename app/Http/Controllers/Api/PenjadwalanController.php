@@ -24,7 +24,13 @@ class PenjadwalanController extends Controller
     public function index()
     {
         try {
-            $penjadwalans = Penjadwalan::with('pendeta')->get();
+            // Get the authenticated pendeta
+            $pendeta = Auth::user();
+
+            // Get penjadwalan only for the logged-in pendeta
+            $penjadwalans = Penjadwalan::with('pendeta')
+                ->where('pendeta_id', $pendeta->id)
+                ->get();
 
             $data = $penjadwalans->map(function ($penjadwalan) {
                 return [
@@ -120,7 +126,13 @@ class PenjadwalanController extends Controller
     public function show($id)
     {
         try {
-            $penjadwalan = Penjadwalan::with('pendeta')->findOrFail($id);
+            // Get the authenticated pendeta
+            $pendeta = Auth::user();
+
+            // Get penjadwalan only for the logged-in pendeta
+            $penjadwalan = Penjadwalan::with('pendeta')
+                ->where('pendeta_id', $pendeta->id)
+                ->findOrFail($id);
 
             return response()->json([
                 'status' => 'success',
@@ -161,7 +173,13 @@ class PenjadwalanController extends Controller
     {
         try {
             Log::info('Update method called for ID:', ['id' => $id]);
-            $penjadwalan = Penjadwalan::findOrFail($id);
+
+            // Get the authenticated pendeta
+            $pendeta = Auth::user();
+
+            // Get penjadwalan only for the logged-in pendeta
+            $penjadwalan = Penjadwalan::where('pendeta_id', $pendeta->id)
+                ->findOrFail($id);
 
             // Get all input data
             $inputData = $request->all();
@@ -196,17 +214,22 @@ class PenjadwalanController extends Controller
             if (isset($inputData['lokasi'])) $updateData['lokasi'] = $inputData['lokasi'];
 
             // Handle file upload
-            if ($request->hasFile('gambar_bukti')) {
+           if ($request->hasFile('gambar_bukti')) {
                 // Delete old file if exists
-                if ($penjadwalan->gambar_bukti && file_exists(public_path('gambar_bukti_penjadwalan/' . $penjadwalan->gambar_bukti))) {
-                    unlink(public_path('gambar_bukti_penjadwalan/' . $penjadwalan->gambar_bukti));
+                $oldFilePath = base_path('../public_html/gambar_bukti_penjadwalan/' . $penjadwalan->gambar_bukti);
+                if ($penjadwalan->gambar_bukti && file_exists($oldFilePath)) {
+                    unlink($oldFilePath);
                 }
-
+            
                 $file = $request->file('gambar_bukti');
                 $filename = time() . '_' . $file->getClientOriginalName();
-                $file->move(public_path('gambar_bukti_penjadwalan'), $filename);
+            
+                // Save directly to public_html
+                $file->move(base_path('../public_html/gambar_bukti_penjadwalan'), $filename);
+            
                 $updateData['gambar_bukti'] = $filename;
             }
+
 
             Log::info('Update data:', $updateData);
 
@@ -236,7 +259,12 @@ class PenjadwalanController extends Controller
     public function destroy($id)
     {
         try {
-            $penjadwalan = Penjadwalan::findOrFail($id);
+            // Get the authenticated pendeta
+            $pendeta = Auth::user();
+
+            // Get penjadwalan only for the logged-in pendeta
+            $penjadwalan = Penjadwalan::where('pendeta_id', $pendeta->id)
+                ->findOrFail($id);
 
             // Delete file if exists
             if ($penjadwalan->gambar_bukti && file_exists(public_path('gambar_bukti_penjadwalan/' . $penjadwalan->gambar_bukti))) {

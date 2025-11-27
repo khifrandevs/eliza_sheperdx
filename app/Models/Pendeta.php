@@ -49,6 +49,31 @@ class Pendeta extends Authenticatable implements JWTSubject
         return $this->belongsTo(Gereja::class, 'gereja_id');
     }
 
+    public function permohonanPerpindahans()
+    {
+        return $this->hasMany(PermohonanPerpindahan::class);
+    }
+
+    public function perlawatans()
+    {
+        return $this->hasMany(Perlawatan::class);
+    }
+
+    public function penjadwalans()
+    {
+        return $this->hasMany(Penjadwalan::class);
+    }
+
+    public function regionHistories()
+    {
+        return $this->hasMany(RegionPendeta::class);
+    }
+
+    public function jabatanHistories()
+    {
+        return $this->hasMany(JabatanPendeta::class);
+    }
+
     // Chat relationships
     public function sentMessages()
     {
